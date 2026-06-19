@@ -234,3 +234,6 @@ Ver `.env.example` para a lista completa. As principais:
 | `DJANGO_SECRET_KEY` | Secret key do Django | (chave insegura de dev) |
 | `DB_HOST` | Host do Postgres | `db` (nome do serviço no compose) |
 | `DB_NAME` / `DB_USER` / `DB_PASSWORD` | Credenciais do Postgres | `django_ddd` |
+
+
+Fim

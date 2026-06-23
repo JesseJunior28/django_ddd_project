@@ -48,6 +48,7 @@ INSTALLED_APPS = [
 
     # Entidades por domínio (cada uma com seu próprio models.py)
     'src.entities.branch',
+    'src.entities.product',
 ]
 
 MIDDLEWARE = [

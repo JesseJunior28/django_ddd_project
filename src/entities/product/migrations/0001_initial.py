@@ -12,18 +12,20 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Branch',
+            name='Product',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('ean', models.CharField(max_length=64, unique=True)),
                 ('name', models.CharField(max_length=255)),
-                ('city', models.CharField(max_length=255)),
-                ('uf', models.CharField(max_length=2)),
-                ('address', models.CharField(max_length=255)),
+                ('is_active', models.BooleanField(default=True)),
+                ('width', models.FloatField()),
+                ('height', models.FloatField()),
+                ('length', models.FloatField()),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
             ],
             options={
-                'db_table': 'branches',
+                'db_table': 'products',
                 'ordering': ['-created_at'],
             },
         ),

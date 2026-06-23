@@ -15,16 +15,22 @@ class CreateBranchUseCase(UseCase):
     def validate(self, input_data: Input) -> Either:
         if not input_data.name:
             return wrong(InputValidationError("name é obrigatório"))
-        if not input_data.industry_id:
-            return wrong(InputValidationError("industry_id é obrigatório"))
+        if not input_data.city:
+            return wrong(InputValidationError("city é obrigatório"))
+        if not input_data.uf or len(input_data.uf) != 2:
+            return wrong(InputValidationError("uf é obrigatório e deve ter 2 caracteres"))
+        if not input_data.address:
+            return wrong(InputValidationError("address é obrigatório"))
         return right(None)
 
     def execute(self, input_data: Input) -> Either:
         try:
             branch = self.repository.create(
                 name=input_data.name,
-                industry_id=input_data.industry_id,
+                city=input_data.city,
+                uf=input_data.uf,
+                address=input_data.address,
             )
-            return right(CreateBranchOutput(id=str(branch.id), name=branch.name))
+            return right(CreateBranchOutput(id=branch.id, name=branch.name))
         except Exception as e:
             return wrong(UnknownError(str(e)))

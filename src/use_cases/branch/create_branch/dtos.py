@@ -4,10 +4,12 @@ from dataclasses import dataclass
 @dataclass
 class CreateBranchInput:
     name: str
-    industry_id: str
+    city: str
+    uf: str
+    address: str
 
 
 @dataclass
 class CreateBranchOutput:
-    id: str
+    id: int
     name: str

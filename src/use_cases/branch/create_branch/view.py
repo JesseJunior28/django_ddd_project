@@ -13,7 +13,9 @@ class CreateBranchView(Controller):
 
         input_data = CreateBranchInput(
             name=request.data.get("name"),
-            industry_id=request.data.get("industry_id"),
+            city=request.data.get("city"),
+            uf=request.data.get("uf"),
+            address=request.data.get("address"),
         )
 
         result = use_case.run(input_data)

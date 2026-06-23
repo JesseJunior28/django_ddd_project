@@ -131,6 +131,28 @@ python manage.py migrate
 > separadamente. O app `src._app` existe só para os management commands
 > (como o `make_usecase`) funcionarem, e não tem models.
 
+## Entidades disponíveis
+
+| Entidade | Campos | App label |
+|---|---|---|
+| `Branch` (`src/entities/branch/`) | `id` (int), `name`, `city`, `uf`, `address`, `created_at`, `updated_at` | `branch` |
+| `Product` (`src/entities/product/`) | `id` (int), `ean` (único), `name`, `is_active`, `width`, `height`, `length`, `created_at`, `updated_at` | `product` |
+
+Cada uma já tem `models.py`, `repository.py`, `apps.py` e migrations geradas.
+Use cases de exemplo prontos: `create-branch` (POST `/branches/`) e `create-product` (POST `/products/`).
+
+Para criar use cases novos para essas entidades, use o gerador:
+```bash
+python manage.py make_usecase product list-products --method get --path products/
+python manage.py make_usecase product update-product --method patch --path "products/<int:id>/"
+python manage.py make_usecase branch list-branches --method get --path branches/
+```
+
+E no `factory.py` gerado, conecte ao repository já existente:
+```python
+from src.entities.product.repository import ProductRepository
+```
+
 ## Gerador de Use Cases (substituto do Plop)
 
 ### Modo interativo (igual ao `npx plop`)
@@ -233,7 +255,4 @@ Ver `.env.example` para a lista completa. As principais:
 | `DJANGO_DEBUG` | Modo debug | `True` |
 | `DJANGO_SECRET_KEY` | Secret key do Django | (chave insegura de dev) |
 | `DB_HOST` | Host do Postgres | `db` (nome do serviço no compose) |
-| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | Credenciais do Postgres | `django_ddd` |
-
-
-Fim
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | Credenciais do Postgres | `django_ddd` 

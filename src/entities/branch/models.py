@@ -1,30 +1,17 @@
-import uuid
 from django.db import models
 
 
 class Branch(models.Model):
-    """
-    Equivalente ao:
 
-        model Branch {
-          id         String   @id @default(uuid())
-          name       String
-          industryId String
-          createdAt  DateTime @default(now())
-          updatedAt  DateTime @updatedAt
-        }
-
-    no schema.prisma.
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    industry_id = models.UUIDField()
+    city = models.CharField(max_length=255)
+    uf = models.CharField(max_length=2)
+    address = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True)  
 
     class Meta:
-        db_table = "branches"  # nome da tabela no Postgres
+        db_table = "branches"
         ordering = ["-created_at"]
 
     def __str__(self):

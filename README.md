@@ -1,6 +1,6 @@
 # Django DDD — Arquitetura Domain-Driven Design
 
-Projeto Django com arquitetura DDD, espelhando a estrutura do projeto TypeScript (Prisma + Express).
+Projeto Django com arquitetura DDD.
 
 **Stack:** Django 5.2 LTS · Django REST Framework · PostgreSQL 16 · Docker
 
@@ -16,19 +16,35 @@ docker compose up --build
 # A API estará em http://localhost:8000
 ```
 
-Isso já roda as migrations automaticamente antes de subir o servidor. Para rodar comandos dentro do container (como o gerador de use cases):
+Isso já roda as migrations automaticamente antes de subir o servidor.
+
+## Makefile — atalhos para os comandos do dia a dia
+
+Em vez de digitar `docker compose exec web python manage.py ...` toda vez,
+use os atalhos do `Makefile` (equivalente aos `scripts` do `package.json`):
 
 ```bash
-docker compose exec web python manage.py make_usecase
-docker compose exec web python manage.py createsuperuser
-docker compose exec web python manage.py makemigrations
+make up           # docker compose up
+make build        # docker compose up --build
+make down         # docker compose down (mantém os dados do Postgres)
+make down-v       # docker compose down -v (remove também o volume do banco)
+make shell        # abre um shell dentro do container web
+make make-usecase # docker compose exec web python manage.py make_usecase
+make migrate      # makemigrations + migrate
+make superuser    # cria um superusuário do Django (acesso ao /admin/)
+make logs         # acompanha os logs do container web
 ```
 
-Para parar:
+Exemplo de uso:
 ```bash
-docker compose down          # mantém os dados do Postgres
-docker compose down -v       # remove também o volume do banco
+make up
+make make-usecase
+make migrate
+make superuser
 ```
+
+> O `Makefile` usa **TAB** para indentar os comandos (não espaço) — é uma exigência
+> do `make`, não uma preferência de estilo. Se for editá-lo, atenção a isso.
 
 ## Subindo sem Docker (ambiente local)
 
@@ -62,6 +78,7 @@ src/
 │       ├── apps.py        # registra o domínio como app Django
 │       ├── models.py      # equivalente ao `model Branch { ... }` do schema.prisma
 │       ├── repository.py  # acesso a dados (create, find_by_id, list_all...)
+│       ├── admin.py       # registra a entidade no /admin/ (CRUD visual)
 │       └── migrations/    # geradas via `makemigrations` (equivalente ao prisma migrate)
 │
 ├── services/             # Serviços de infraestrutura (email, hash, storage, token...)
@@ -82,17 +99,16 @@ src/
         └── make_usecase.py  # Gerador de use cases (equivalente ao npx plop)
 ```
 
-## Onde fica o "schema.prisma"?
+## Onde ficam as migrations?
 
-Não existe um arquivo único como no Prisma. No Django, cada domínio declara
-seus próprios models em `src/entities/<dominio>/models.py`, e as migrations
-são geradas a partir deles — não escritas à mão.
+No Django, cada domínio declara seus próprios models em `src/entities/<dominio>/models.py`, 
+e as migrations são geradas a partir deles — não escritas à mão.
 
 | Prisma | Django |
 |---|---|
 | `schema.prisma` (um arquivo, todos os models) | `src/entities/<dominio>/models.py` (um por domínio) |
 | `model Branch { ... }` | `class Branch(models.Model): ...` |
-| `npx prisma migrate dev` | `python manage.py makemigrations <app_label> && python manage.py migrate` |
+| `npx prisma migrate dev` | `make migrate` (ou `python manage.py makemigrations <app_label> && python manage.py migrate`) |
 | `prisma/migrations/` | `src/entities/<dominio>/migrations/` (gerado automaticamente) |
 
 ### Criando uma nova entidade — passo a passo
@@ -119,17 +135,48 @@ PYEOF
 #    'src.entities.<dominio>',
 
 # 5. Gerar e aplicar a migration
-python manage.py makemigrations <dominio>
-python manage.py migrate
+make migrate
+# ou: python manage.py makemigrations <dominio> && python manage.py migrate
 
 # 6. Criar o repository.py (acesso a dados)
 #    (veja src/entities/branch/repository.py como referência)
+
+# 7. Registrar a entidade no admin (veja seção "Admin do Django" abaixo)
 ```
 
 > ⚠️ Cada domínio com `models.py` precisa estar listado em `INSTALLED_APPS`
 > com seu `label` — é assim que o Django sabe rastrear as migrations dele
 > separadamente. O app `src._app` existe só para os management commands
 > (como o `make_usecase`) funcionarem, e não tem models.
+
+## Admin do Django (CRUD visual em `/admin/`)
+
+O Django só lista no admin o que é **explicitamente registrado** — diferente de
+ferramentas que expõem tudo automaticamente. Por padrão, `/admin/` mostra apenas
+Users e Groups; para uma entidade aparecer lá, crie um `admin.py` na pasta dela.
+
+**Passo a passo:**
+
+1. Crie um superusuário (se ainda não tiver um):
+   ```bash
+   make superuser
+   ```
+
+2. Crie `src/entities/<dominio>/admin.py`, por exemplo para `Branch`:
+   ```python
+   from django.contrib import admin
+   from .models import Branch
+
+   @admin.register(Branch)
+   class BranchAdmin(admin.ModelAdmin):
+       list_display = ("id", "name", "city", "uf", "address", "created_at")
+       search_fields = ("name", "city", "uf")
+   ```
+
+3. Acesse `http://localhost:8000/admin/` e logue com o superusuário.
+
+Não precisa de migration nem de configuração extra — o Django descobre o
+`admin.py` automaticamente ao iniciar.
 
 ## Entidades disponíveis
 
@@ -143,9 +190,9 @@ Use cases de exemplo prontos: `create-branch` (POST `/branches/`) e `create-prod
 
 Para criar use cases novos para essas entidades, use o gerador:
 ```bash
-python manage.py make_usecase product list-products --method get --path products/
-python manage.py make_usecase product update-product --method patch --path "products/<int:id>/"
-python manage.py make_usecase branch list-branches --method get --path branches/
+make make-usecase product list-products --method get --path products/
+make make-usecase product update-product --method patch --path "products/<int:id>/"
+make make-usecase branch list-branches --method get --path branches/
 ```
 
 E no `factory.py` gerado, conecte ao repository já existente:
@@ -158,7 +205,21 @@ from src.entities.product.repository import ProductRepository
 ### Modo interativo (igual ao `npx plop`)
 
 ```bash
-python manage.py make_usecase
+make make-usecase
+# ou: python manage.py make_usecase
+```
+
+### Criando um Use Case — Passo a Passo
+
+```bash
+# 1. Gerar o scaffold (modo interativo ou com flags)
+make make-usecase
+# ou: python manage.py make_usecase branch create-branch --method post --path branches/
+
+# 2. Definir os campos em dtos.py
+# 3. Implementar validate() e execute() em use_case.py
+# 4. Configurar o repository em factory.py
+# 5. Colar a rota sugerida em config/urls.py
 ```
 
 Ele vai perguntar, em sequência:
@@ -178,10 +239,10 @@ Ele vai perguntar, em sequência:
 ### Modo direto (via flags, sem prompts — útil em scripts/CI)
 
 ```bash
-python manage.py make_usecase branch create-branch --method post --path branches/
-python manage.py make_usecase auth login --method post --path auth/login/
-python manage.py make_usecase execution list-executions --method get --path executions/
-python manage.py make_usecase branch update-branch --method patch --path "branches/<uuid:id>/"
+make make-usecase branch create-branch --method post --path branches/
+make make-usecase auth login --method post --path auth/login/
+make make-usecase execution list-executions --method get --path executions/
+make make-usecase branch update-branch --method patch --path "branches/<uuid:id>/"
 ```
 
 > 💡 Quando o path tem parâmetros (`<uuid:id>`, `<int:pk>`, etc.), o gerador já cria
@@ -190,7 +251,7 @@ python manage.py make_usecase branch update-branch --method patch --path "branch
 ### Preview sem criar arquivos
 
 ```bash
-python manage.py make_usecase demand list-demands --dry-run
+make make-usecase demand list-demands --dry-run
 ```
 
 Isso gera os 5 arquivos do use case:
@@ -234,18 +295,6 @@ if result.is_wrong():   # equivalente ao result.isWrong()
 return self.ok(result.value)
 ```
 
-## Criando um Use Case — Passo a Passo
-
-```bash
-# 1. Gerar o scaffold (modo interativo ou com flags)
-python manage.py make_usecase branch create-branch --method post --path branches/
-
-# 2. Definir os campos em dtos.py
-# 3. Implementar validate() e execute() em use_case.py
-# 4. Configurar o repository em factory.py
-# 5. Colar a rota sugerida em config/urls.py
-```
-
 ## Variáveis de ambiente
 
 Ver `.env.example` para a lista completa. As principais:
@@ -255,4 +304,4 @@ Ver `.env.example` para a lista completa. As principais:
 | `DJANGO_DEBUG` | Modo debug | `True` |
 | `DJANGO_SECRET_KEY` | Secret key do Django | (chave insegura de dev) |
 | `DB_HOST` | Host do Postgres | `db` (nome do serviço no compose) |
-| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | Credenciais do Postgres | `django_ddd` 
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | Credenciais do Postgres | `django_ddd` |

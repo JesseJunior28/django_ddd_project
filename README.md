@@ -190,9 +190,9 @@ Use cases de exemplo prontos: `create-branch` (POST `/branches/`) e `create-prod
 
 Para criar use cases novos para essas entidades, use o gerador:
 ```bash
-make make-usecase product list-products --method get --path products/
-make make-usecase product update-product --method patch --path "products/<int:id>/"
-make make-usecase branch list-branches --method get --path branches/
+python manage.py make_usecase product list-products --method get --path products/
+python manage.py make_usecase product update-product --method patch --path "products/<int:id>/"
+python manage.py make_usecase branch list-branches --method get --path branches/
 ```
 
 E no `factory.py` gerado, conecte ao repository já existente:
@@ -207,19 +207,6 @@ from src.entities.product.repository import ProductRepository
 ```bash
 make make-usecase
 # ou: python manage.py make_usecase
-```
-
-### Criando um Use Case — Passo a Passo
-
-```bash
-# 1. Gerar o scaffold (modo interativo ou com flags)
-make make-usecase
-# ou: python manage.py make_usecase branch create-branch --method post --path branches/
-
-# 2. Definir os campos em dtos.py
-# 3. Implementar validate() e execute() em use_case.py
-# 4. Configurar o repository em factory.py
-# 5. Colar a rota sugerida em config/urls.py
 ```
 
 Ele vai perguntar, em sequência:
@@ -239,10 +226,10 @@ Ele vai perguntar, em sequência:
 ### Modo direto (via flags, sem prompts — útil em scripts/CI)
 
 ```bash
-make make-usecase branch create-branch --method post --path branches/
-make make-usecase auth login --method post --path auth/login/
-make make-usecase execution list-executions --method get --path executions/
-make make-usecase branch update-branch --method patch --path "branches/<uuid:id>/"
+python manage.py make_usecase branch create-branch --method post --path branches/
+python manage.py make_usecase auth login --method post --path auth/login/
+python manage.py make_usecase execution list-executions --method get --path executions/
+python manage.py make_usecase branch update-branch --method patch --path "branches/<uuid:id>/"
 ```
 
 > 💡 Quando o path tem parâmetros (`<uuid:id>`, `<int:pk>`, etc.), o gerador já cria
@@ -251,7 +238,7 @@ make make-usecase branch update-branch --method patch --path "branches/<uuid:id>
 ### Preview sem criar arquivos
 
 ```bash
-make make-usecase demand list-demands --dry-run
+python manage.py make_usecase demand list-demands --dry-run
 ```
 
 Isso gera os 5 arquivos do use case:

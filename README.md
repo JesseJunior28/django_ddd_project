@@ -29,7 +29,7 @@ make build        # docker compose up --build
 make down         # docker compose down (mantém os dados do Postgres)
 make down-v       # docker compose down -v (remove também o volume do banco)
 make shell        # abre um shell dentro do container web
-make make-usecase # docker compose exec web python manage.py make_usecase
+make make-usecase # docker compose exec web python manage.py make_usecase (modo interativo)
 make migrate      # makemigrations + migrate
 make superuser    # cria um superusuário do Django (acesso ao /admin/)
 make logs         # acompanha os logs do container web
@@ -178,6 +178,11 @@ Users e Groups; para uma entidade aparecer lá, crie um `admin.py` na pasta dela
 Não precisa de migration nem de configuração extra — o Django descobre o
 `admin.py` automaticamente ao iniciar.
 
+> ⚠️ No WSL, o autoreload do `runserver` às vezes não detecta o arquivo novo
+> (limitação de notificação de filesystem entre Windows/WSL). Se o admin
+> não aparecer depois de criar o `admin.py`, reinicie o container:
+> `make down && make up`.
+
 ## Entidades disponíveis
 
 | Entidade | Campos | App label |
@@ -185,14 +190,14 @@ Não precisa de migration nem de configuração extra — o Django descobre o
 | `Branch` (`src/entities/branch/`) | `id` (int), `name`, `city`, `uf`, `address`, `created_at`, `updated_at` | `branch` |
 | `Product` (`src/entities/product/`) | `id` (int), `ean` (único), `name`, `is_active`, `width`, `height`, `length`, `created_at`, `updated_at` | `product` |
 
-Cada uma já tem `models.py`, `repository.py`, `apps.py` e migrations geradas.
+Cada uma já tem `models.py`, `repository.py`, `apps.py`, `admin.py` e migrations geradas.
 Use cases de exemplo prontos: `create-branch` (POST `/branches/`) e `create-product` (POST `/products/`).
 
 Para criar use cases novos para essas entidades, use o gerador:
 ```bash
-python manage.py make_usecase product list-products --method get --path products/
-python manage.py make_usecase product update-product --method patch --path "products/<int:id>/"
-python manage.py make_usecase branch list-branches --method get --path branches/
+docker compose exec web python manage.py make_usecase product list-products --method get --path products/
+docker compose exec web python manage.py make_usecase product update-product --method patch --path "products/<int:id>/"
+docker compose exec web python manage.py make_usecase branch list-branches --method get --path branches/
 ```
 
 E no `factory.py` gerado, conecte ao repository já existente:
@@ -206,7 +211,7 @@ from src.entities.product.repository import ProductRepository
 
 ```bash
 make make-usecase
-# ou: python manage.py make_usecase
+# ou: docker compose exec web python manage.py make_usecase
 ```
 
 Ele vai perguntar, em sequência:
@@ -223,22 +228,13 @@ Ele vai perguntar, em sequência:
 🔗 Path da rota (default: <dominio>/):
 ```
 
-### Modo direto (via flags, sem prompts — útil em scripts/CI)
-
-```bash
-python manage.py make_usecase branch create-branch --method post --path branches/
-python manage.py make_usecase auth login --method post --path auth/login/
-python manage.py make_usecase execution list-executions --method get --path executions/
-python manage.py make_usecase branch update-branch --method patch --path "branches/<uuid:id>/"
-```
-
 > 💡 Quando o path tem parâmetros (`<uuid:id>`, `<int:pk>`, etc.), o gerador já cria
 > a assinatura do método na view com esses kwargs.
 
 ### Preview sem criar arquivos
 
 ```bash
-python manage.py make_usecase demand list-demands --dry-run
+docker compose exec web python manage.py make_usecase demand list-demands --dry-run
 ```
 
 Isso gera os 5 arquivos do use case:
@@ -256,6 +252,19 @@ Ao final, o comando também imprime o snippet pronto para colar em `config/urls.
 ```python
 from src.use_cases.branch.create_branch.view import CreateBranchView
 path("branches/", CreateBranchView.as_view(), name="create-branch"),
+```
+
+### Passo a passo completo (gerar + implementar)
+
+```bash
+# 1. Gerar o scaffold (modo interativo ou com flags)
+make make-usecase
+# ou: docker compose exec web python manage.py make_usecase branch create-branch --method post --path branches/
+
+# 2. Definir os campos em dtos.py
+# 3. Implementar validate() e execute() em use_case.py
+# 4. Configurar o repository em factory.py
+# 5. Colar a rota sugerida em config/urls.py
 ```
 
 ## Padrão Either

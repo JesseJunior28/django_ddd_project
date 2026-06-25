@@ -2,15 +2,6 @@ from django.db import models
 
 
 class Product(models.Model):
-    """
-    id          -> AutoField (int, automático)
-    ean         -> string (código de barras)
-    name        -> string
-    is_active   -> boolean
-    width       -> float
-    height      -> float
-    length      -> float
-    """
 
     ean = models.CharField(max_length=64, unique=True)
     name = models.CharField(max_length=255)

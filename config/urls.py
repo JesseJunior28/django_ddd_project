@@ -17,8 +17,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from src.use_cases.branch.create_branch.view import CreateBranchView
+from src.use_cases.product.create_product.view import CreateProductView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('branches/', CreateBranchView.as_view(), name='create-branch'),
+    path("products/", CreateProductView.as_view(), name="create-product"),
 ]

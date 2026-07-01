@@ -114,6 +114,17 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+PASSWORD_HASHERS = [
+    "src.services.hash.bcrypt_hasher.BcryptPasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+]
+
+# JWT — idênticos ao config/default.yaml do backend TS
+
+JWT_SECRET = os.environ.get("JWT_SECRET", "insecure-secret-change-me")
+JWT_ACCESS_TOKEN_EXPIRES_IN = os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_IN", "1h")
+JWT_ID_TOKEN_EXPIRES_IN = os.environ.get("JWT_ID_TOKEN_EXPIRES_IN", "15m")
+JWT_REFRESH_TOKEN_EXPIRES_IN = os.environ.get("JWT_REFRESH_TOKEN_EXPIRES_IN", "7d")
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/

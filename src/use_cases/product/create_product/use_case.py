@@ -17,8 +17,12 @@ class CreateProductUseCase(UseCase):
             return wrong(InputValidationError("ean é obrigatório"))
         if not input_data.name:
             return wrong(InputValidationError("name é obrigatório"))
-        if input_data.width <= 0 or input_data.height <= 0 or input_data.length <= 0:
-            return wrong(InputValidationError("width, height e length devem ser maiores que zero"))
+        for field in ("width", "height", "length"):
+            value = getattr(input_data, field)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return wrong(InputValidationError(f"{field} é obrigatório e deve ser numérico"))
+            if value <= 0:
+                return wrong(InputValidationError(f"{field} deve ser maior que zero"))
         return right(None)
 
     def execute(self, input_data: Input) -> Either:

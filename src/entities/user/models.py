@@ -23,6 +23,12 @@ class User(models.Model):
 
     itec_user = models.IntegerField(null=True, blank=True, unique=True)
 
+    branches = models.ManyToManyField(
+        "branch.Branch",
+        related_name="users",
+        blank=True,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

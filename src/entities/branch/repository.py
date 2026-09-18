@@ -8,8 +8,8 @@ class BranchRepository:
     no projeto TypeScript — aqui usamos o ORM do Django diretamente.
     """
 
-    def create(self, name: str, industry_id: str) -> Branch:
-        return Branch.objects.create(name=name, industry_id=industry_id)
+    def create(self, name: str, city: str, uf: str, address: str) -> Branch:
+        return Branch.objects.create(name=name, city=city, uf=uf, address=address)
 
     def find_by_id(self, id: str) -> Branch | None:
         return Branch.objects.filter(id=id).first()

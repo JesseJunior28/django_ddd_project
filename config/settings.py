@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     # Entidades por domínio (cada uma com seu próprio models.py)
     'src.entities.branch',
     'src.entities.product',
+    'src.entities.user',
 ]
 
 MIDDLEWARE = [
@@ -115,7 +116,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 PASSWORD_HASHERS = [
-    "src.services.hash.bcrypt_hasher.BcryptPasswordHasher",
     "django.contrib.auth.hashers.PBKDF2PasswordHasher",
 ]
 

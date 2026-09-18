@@ -1,7 +1,11 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import TypeVar, Generic
 
+from src.errors import UnknownError
 from .either import Either, wrong
+
+logger = logging.getLogger(__name__)
 
 Input = TypeVar("Input")
 FailureOutput = TypeVar("FailureOutput")
@@ -25,8 +29,18 @@ class UseCase(ABC, Generic[Input, FailureOutput, SuccessOutput]):
         ...
 
     def run(self, input_data: Input) -> Either[FailureOutput, SuccessOutput]:
-        """Ponto de entrada do use case. Chama validate e depois execute."""
-        validation = self.validate(input_data)
-        if validation.is_wrong():
-            return wrong(validation.value)
-        return self.execute(input_data)
+        """
+        Ponto de entrada do use case. Chama validate e depois execute.
+
+        Exceção inesperada (bug, banco fora do ar...) é logada com traceback
+        e vira UnknownError genérico — o detalhe nunca chega ao cliente.
+        Erros esperados devem ser retornados com wrong() pelo próprio use case.
+        """
+        try:
+            validation = self.validate(input_data)
+            if validation.is_wrong():
+                return wrong(validation.value)
+            return self.execute(input_data)
+        except Exception:
+            logger.exception("Erro inesperado em %s", type(self).__name__)
+            return wrong(UnknownError())

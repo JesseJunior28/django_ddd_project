@@ -24,6 +24,7 @@ Gera a estrutura:
 
 import os
 import re
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 HTTP_METHODS = ["get", "post", "put", "patch", "delete"]
@@ -83,16 +84,16 @@ class {pascal_name}UseCase(UseCase):
         self.repository = repository
 
     def validate(self, input_data: Input) -> Either:
-        if not input_data:
-            return wrong(InputValidationError("invalid input"))
+        # TODO: valide cada campo do input, ex:
+        # if not input_data.name:
+        #     return wrong(InputValidationError("name é obrigatório"))
         return right(None)
 
     def execute(self, input_data: Input) -> Either:
-        try:
-            # TODO: implemente a lógica de negócio
-            return right({pascal_name}Output())
-        except Exception as e:
-            return wrong(UnknownError(str(e)))
+        # TODO: implemente a lógica de negócio.
+        # Erros esperados: return wrong(AlgumBusinessError(...)).
+        # Exceções inesperadas são logadas pelo UseCase.run e viram UnknownError.
+        return right({pascal_name}Output())
 '''
 
 TEMPLATE_FACTORY = '''\
@@ -113,7 +114,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from src.core import Controller
-from src.errors import InputValidationError, UnknownError
+from src.errors import BusinessError, ConflictError, InputValidationError, NotFoundError, UnknownError
 from .dtos import {pascal_name}Input
 from .factory import build_use_case
 
@@ -130,8 +131,12 @@ class {pascal_name}View(Controller):
 
         if result.is_wrong():
             error = result.value
+            # Resolvido pela MRO: subclasses caem no handler da classe base
             return self.map_error(error, {{
                 InputValidationError: self.bad_request,
+                NotFoundError: self.not_found,
+                ConflictError: self.conflict,
+                BusinessError: self.bad_request,
                 UnknownError: self.internal_server_error,
             }})
 
@@ -189,7 +194,6 @@ class Command(BaseCommand):
             except (ValueError, IndexError):
                 http_method = "post"
         if not http_path:
-            snake_name_guess = to_snake_case(use_case_raw)
             domain_guess = to_snake_domain(domain_raw)
             default_path = f"{domain_guess}/"
             http_path = input(f"🔗 Path da rota (default: {default_path}): ").strip() or default_path
@@ -216,7 +220,8 @@ class Command(BaseCommand):
         if http_method == "delete":
             success_response = "no_content"
 
-        base_path = os.path.join("src", "use_cases", snake_domain, snake_name)
+        # Relativo ao BASE_DIR (raiz do projeto), não ao diretório de onde o comando rodou
+        base_path = os.path.join(settings.BASE_DIR, "src", "use_cases", snake_domain, snake_name)
 
         files = {
             "__init__.py": TEMPLATE_INIT.format(pascal_name=pascal_name),
@@ -243,7 +248,7 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING("⚠️  Modo dry-run — nenhum arquivo será criado\n"))
 
-        domain_init = os.path.join("src", "use_cases", snake_domain, "__init__.py")
+        domain_init = os.path.join(settings.BASE_DIR, "src", "use_cases", snake_domain, "__init__.py")
         if not dry_run:
             os.makedirs(base_path, exist_ok=True)
             if not os.path.exists(domain_init):

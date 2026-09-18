@@ -1,3 +1,4 @@
+import re
 import uuid
 import time
 from typing import Union
@@ -5,6 +6,7 @@ from typing import Union
 import jwt
 from django.conf import settings
 
+from src.core.either import Either, right, wrong
 from .errors import InvalidTokenError, TokenExpiredError
 from .service import (
     TokenType,
@@ -14,12 +16,13 @@ from .service import (
     RefreshTokenPayload,
 )
 
+TokenPayload = Union[AccessTokenPayload, IdTokenPayload, RefreshTokenPayload]
 
-# Equivalente ao Record<TokenType, string> do TS
-_EXPIRES_IN: dict[TokenType, str] = {
-    TokenType.AccessToken: lambda: settings.JWT_ACCESS_TOKEN_EXPIRES_IN,
-    TokenType.IdToken: lambda: settings.JWT_ID_TOKEN_EXPIRES_IN,
-    TokenType.RefreshToken: lambda: settings.JWT_REFRESH_TOKEN_EXPIRES_IN,
+# Equivalente ao Record<TokenType, string> do TS — nome da setting de expiração
+_EXPIRES_IN_SETTING: dict[TokenType, str] = {
+    TokenType.AccessToken: "JWT_ACCESS_TOKEN_EXPIRES_IN",
+    TokenType.IdToken: "JWT_ID_TOKEN_EXPIRES_IN",
+    TokenType.RefreshToken: "JWT_REFRESH_TOKEN_EXPIRES_IN",
 }
 
 # Equivalente ao typ Record<TokenType, string> do TS
@@ -34,15 +37,23 @@ _AUDIENCE = "gestao-por-espaco"
 _ISSUER = "https://ge.drogariaglobo.com.br"
 
 
+_EXPIRES_IN_PATTERN = re.compile(r"^\s*(\d+)\s*([smhd])\s*$")
+_UNIT_SECONDS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+
+
 def _parse_expires_in(expires_in: str) -> int:
     """
-    Converte string de expiração (ex: '1h', '7d', '15m') para segundos.
-    Equivalente ao ms() do Node.js.
+    Converte string de expiração (ex: '1h', '7d', '15m', '30s') para segundos.
+    A unidade é obrigatória: no ms() do Node, '3600' sem unidade seria
+    3600 *milissegundos* — ambíguo demais para aceitar em silêncio.
     """
-    units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-    unit = expires_in[-1]
-    value = int(expires_in[:-1])
-    return value * units.get(unit, 1)
+    match = _EXPIRES_IN_PATTERN.match(expires_in)
+    if not match:
+        raise ValueError(
+            f"Expiração JWT inválida: {expires_in!r}. Use <número><s|m|h|d>, ex: '15m', '7d'."
+        )
+    value, unit = match.groups()
+    return int(value) * _UNIT_SECONDS[unit]
 
 
 class JwtTokenService:
@@ -61,14 +72,18 @@ class JwtTokenService:
 
     def __init__(self):
         self.secret: str = settings.JWT_SECRET
+        # Parse na construção: configuração inválida falha logo, não no 1º login
+        self._expires_in_seconds: dict[TokenType, int] = {
+            token_type: _parse_expires_in(getattr(settings, setting_name))
+            for token_type, setting_name in _EXPIRES_IN_SETTING.items()
+        }
 
     def sign(
         self,
         token_type: TokenType,
         payload: dict,
     ) -> TokenWrapper:
-        expires_in_str = _EXPIRES_IN[token_type]()
-        expires_in_seconds = _parse_expires_in(expires_in_str)
+        expires_in_seconds = self._expires_in_seconds[token_type]
 
         now = int(time.time())
         exp = now + expires_in_seconds
@@ -100,10 +115,10 @@ class JwtTokenService:
         self,
         token: str,
         token_type: TokenType,
-    ) -> Union[AccessTokenPayload, IdTokenPayload, RefreshTokenPayload]:
+    ) -> Either[InvalidTokenError | TokenExpiredError, TokenPayload]:
         """
-        Equivalente ao verify() do TS. Mapeia os erros do PyJWT para
-        InvalidTokenError / TokenExpiredError, exatamente como no TS.
+        Equivalente ao verify() do TS, mas no padrão Either do projeto:
+        retorna wrong(TokenExpiredError | InvalidTokenError) ou right(payload).
 
         Rejeita token de outro tipo (ex: IdToken usado como AccessToken)
         comparando o header `typ` com o tipo esperado.
@@ -116,41 +131,46 @@ class JwtTokenService:
                 audience=_AUDIENCE,
                 issuer=_ISSUER,
             )
-
-            # Seguro ler o header depois do decode: a assinatura já cobriu ele
-            if jwt.get_unverified_header(token).get("typ") != _TYP[token_type]:
-                raise InvalidTokenError()
-
-            sub = int(payload["sub"])
-
-            if token_type == TokenType.AccessToken:
-                return AccessTokenPayload(
-                    sub=sub,
-                    role=payload["role"],
-                    allowed_branches_ids=payload.get("allowedBranchesIds"),
-                    exp=payload.get("exp"),
-                    iat=payload.get("iat"),
-                    aud=payload.get("aud"),
-                    iss=payload.get("iss"),
-                    jti=payload.get("jti"),
-                )
-            elif token_type == TokenType.IdToken:
-                return IdTokenPayload(
-                    sub=sub,
-                    email=payload["email"],
-                    role=payload["role"],
-                    exp=payload.get("exp"),
-                    iat=payload.get("iat"),
-                )
-            else:  # RefreshToken
-                return RefreshTokenPayload(
-                    sub=sub,
-                    exp=payload.get("exp"),
-                    iat=payload.get("iat"),
-                )
-
         except jwt.ExpiredSignatureError:
-            raise TokenExpiredError()
+            return wrong(TokenExpiredError())
+        except jwt.InvalidTokenError:
+            return wrong(InvalidTokenError())
+
+        # Seguro ler o header depois do decode: a assinatura já cobriu ele
+        if jwt.get_unverified_header(token).get("typ") != _TYP[token_type]:
+            return wrong(InvalidTokenError())
+
+        try:
+            return right(self._build_payload(token_type, payload))
         # KeyError/ValueError: claim obrigatória ausente ou sub não numérico
-        except (jwt.InvalidTokenError, KeyError, ValueError):
-            raise InvalidTokenError()
+        except (KeyError, ValueError):
+            return wrong(InvalidTokenError())
+
+    @staticmethod
+    def _build_payload(token_type: TokenType, payload: dict) -> TokenPayload:
+        sub = int(payload["sub"])
+
+        if token_type == TokenType.AccessToken:
+            return AccessTokenPayload(
+                sub=sub,
+                role=payload["role"],
+                allowed_branches_ids=payload.get("allowedBranchesIds"),
+                exp=payload.get("exp"),
+                iat=payload.get("iat"),
+                aud=payload.get("aud"),
+                iss=payload.get("iss"),
+                jti=payload.get("jti"),
+            )
+        if token_type == TokenType.IdToken:
+            return IdTokenPayload(
+                sub=sub,
+                email=payload["email"],
+                role=payload["role"],
+                exp=payload.get("exp"),
+                iat=payload.get("iat"),
+            )
+        return RefreshTokenPayload(
+            sub=sub,
+            exp=payload.get("exp"),
+            iat=payload.get("iat"),
+        )

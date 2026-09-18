@@ -1,6 +1,7 @@
 from src.core import UseCase
 from src.core.either import Either, right, wrong
-from src.errors import InputValidationError, ApplicationError, BusinessError, UnknownError, ConflictError
+from src.entities.product.errors import DuplicateProductEanError
+from src.errors import InputValidationError, ApplicationError, BusinessError, UnknownError
 from .dtos import CreateProductInput, CreateProductOutput
 
 Input = CreateProductInput
@@ -38,7 +39,5 @@ class CreateProductUseCase(UseCase):
                 is_active=input_data.is_active,
             )
             return right(CreateProductOutput(id=product.id, ean=product.ean, name=product.name))
-        except ConflictError as e:
+        except DuplicateProductEanError as e:
             return wrong(e)
-        except Exception as e:
-            return wrong(UnknownError(str(e)))

@@ -24,13 +24,10 @@ class CreateBranchUseCase(UseCase):
         return right(None)
 
     def execute(self, input_data: Input) -> Either:
-        try:
-            branch = self.repository.create(
-                name=input_data.name,
-                city=input_data.city,
-                uf=input_data.uf,
-                address=input_data.address,
-            )
-            return right(CreateBranchOutput(id=branch.id, name=branch.name))
-        except Exception as e:
-            return wrong(UnknownError(str(e)))
+        branch = self.repository.create(
+            name=input_data.name,
+            city=input_data.city,
+            uf=input_data.uf,
+            address=input_data.address,
+        )
+        return right(CreateBranchOutput(id=branch.id, name=branch.name))

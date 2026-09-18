@@ -1,21 +1,17 @@
-from dataclasses import dataclass
+from src.errors import ConflictError, NotFoundError
 
-@dataclass
-class DomainError(Exception):
-    message: str
 
-@dataclass
-class ProductNotFoundError(DomainError):
-    def __init__(self, product_id: int= None, ean: str = None):
-        if product_id:
-            self.message = f"Produto com ID {product_id} não encontrado."
+class ProductNotFoundError(NotFoundError):
+    def __init__(self, product_id: int | None = None, ean: str | None = None):
+        if product_id is not None:
+            message = f"Produto com ID {product_id} não encontrado."
         elif ean:
-            self.message = f"Produto com EAN {ean} não encontrado."
+            message = f"Produto com EAN {ean} não encontrado."
         else:
-            self.message = f"Produto não encontrado."
+            message = "Produto não encontrado."
+        super().__init__("Product", message)
 
-@dataclass
-class DuplicateProductEanError(DomainError):
+
+class DuplicateProductEanError(ConflictError):
     def __init__(self, ean: str):
-        self.message = f"Um produto com EAN {ean} que já existe."
-
+        super().__init__(f"Já existe um produto com o EAN {ean}.")

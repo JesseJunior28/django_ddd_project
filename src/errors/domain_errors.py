@@ -37,8 +37,8 @@ class UnknownError(ApplicationError):
 class NotFoundError(BusinessError):
     """Entidade não encontrada."""
 
-    def __init__(self, entity: str = "Resource"):
-        super().__init__(f"{entity} not found")
+    def __init__(self, entity: str = "Resource", message: str | None = None):
+        super().__init__(message or f"{entity} not found")
 
 
 class ConflictError(BusinessError):

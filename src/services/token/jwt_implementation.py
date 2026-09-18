@@ -75,6 +75,8 @@ class JwtTokenService:
 
         claims = {
             **payload,
+            # RFC 7519 exige sub string — PyJWT >= 2.10 rejeita sub inteiro no decode
+            "sub": str(payload["sub"]),
             "exp": exp,
             "iat": now,
             "aud": _AUDIENCE,
@@ -102,6 +104,9 @@ class JwtTokenService:
         """
         Equivalente ao verify() do TS. Mapeia os erros do PyJWT para
         InvalidTokenError / TokenExpiredError, exatamente como no TS.
+
+        Rejeita token de outro tipo (ex: IdToken usado como AccessToken)
+        comparando o header `typ` com o tipo esperado.
         """
         try:
             payload = jwt.decode(
@@ -112,9 +117,15 @@ class JwtTokenService:
                 issuer=_ISSUER,
             )
 
+            # Seguro ler o header depois do decode: a assinatura já cobriu ele
+            if jwt.get_unverified_header(token).get("typ") != _TYP[token_type]:
+                raise InvalidTokenError()
+
+            sub = int(payload["sub"])
+
             if token_type == TokenType.AccessToken:
                 return AccessTokenPayload(
-                    sub=payload["sub"],
+                    sub=sub,
                     role=payload["role"],
                     allowed_branches_ids=payload.get("allowedBranchesIds"),
                     exp=payload.get("exp"),
@@ -125,7 +136,7 @@ class JwtTokenService:
                 )
             elif token_type == TokenType.IdToken:
                 return IdTokenPayload(
-                    sub=payload["sub"],
+                    sub=sub,
                     email=payload["email"],
                     role=payload["role"],
                     exp=payload.get("exp"),
@@ -133,12 +144,13 @@ class JwtTokenService:
                 )
             else:  # RefreshToken
                 return RefreshTokenPayload(
-                    sub=payload["sub"],
+                    sub=sub,
                     exp=payload.get("exp"),
                     iat=payload.get("iat"),
                 )
 
         except jwt.ExpiredSignatureError:
             raise TokenExpiredError()
-        except (jwt.InvalidTokenError, jwt.DecodeError, jwt.InvalidSignatureError):
+        # KeyError/ValueError: claim obrigatória ausente ou sub não numérico
+        except (jwt.InvalidTokenError, KeyError, ValueError):
             raise InvalidTokenError()

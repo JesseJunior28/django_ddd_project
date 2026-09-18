@@ -1,7 +1,6 @@
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 
-from django.contrib.auth.hashers import make_password, check_password
 from django.db.models import QuerySet
 from django.utils import timezone
 
@@ -9,25 +8,21 @@ from .models import User, ResetToken
 
 
 class UserRepository:
+    """
+    Só persiste. `password` já chega com hash — quem gera/verifica o hash
+    é o use case, via HashService (src/services/hash).
+    """
+
     @staticmethod
     def create(user_data: dict) -> User:
-        
-        user_data = dict[Any, Any](user_data) 
-        if "password" in user_data:
-            user_data["password"] = make_password(user_data["password"])
         return User.objects.create(**user_data)
 
     @staticmethod
-    def check_password(user: User, raw_password: str) -> bool:
-        return check_password(raw_password, user.password)
-
-    @staticmethod
-    def set_password(user_id: int, raw_password: str) -> Optional[User]:
-        
+    def set_password(user_id: int, password_hash: str) -> Optional[User]:
         user = User.objects.filter(id=user_id).first()
         if not user:
             return None
-        user.password = make_password(raw_password)
+        user.password = password_hash
         user.save(update_fields=["password", "updated_at"])
         return user
 

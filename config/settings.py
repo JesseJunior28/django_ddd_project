@@ -115,6 +115,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Usado só pelo django.contrib.auth (superuser/admin). O User do domínio
+# (src.entities.user) usa BcryptHashService — hashes $2b$ compatíveis com o TS.
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.PBKDF2PasswordHasher",
 ]

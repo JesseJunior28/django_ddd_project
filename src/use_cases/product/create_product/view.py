@@ -26,7 +26,7 @@ class CreateProductView(Controller):
             error = result.value
             return self.map_error(error, {
                 InputValidationError: self.bad_request,
-                ConflictError: self.bad_request,
+                ConflictError: self.conflict,
                 UnknownError: self.internal_server_error,
             })
 

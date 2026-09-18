@@ -27,10 +27,8 @@ class CreateProductUseCase(UseCase):
 
     def execute(self, input_data: Input) -> Either:
         try:
-            existing = self.repository.find_by_ean(input_data.ean)
-            if existing:
-                return wrong(ConflictError(f"Product com ean '{input_data.ean}' já existe"))
-
+            # Sem checar find_by_ean antes: entre a checagem e o insert outra
+            # requisição pode criar o mesmo EAN. O unique do banco é a fonte de verdade.
             product = self.repository.create(
                 ean=input_data.ean,
                 name=input_data.name,
@@ -40,5 +38,7 @@ class CreateProductUseCase(UseCase):
                 is_active=input_data.is_active,
             )
             return right(CreateProductOutput(id=product.id, ean=product.ean, name=product.name))
+        except ConflictError as e:
+            return wrong(e)
         except Exception as e:
             return wrong(UnknownError(str(e)))

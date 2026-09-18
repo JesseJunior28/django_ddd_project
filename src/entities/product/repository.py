@@ -1,3 +1,6 @@
+from django.db import IntegrityError, transaction
+
+from src.errors import ConflictError
 from .models import Product
 
 
@@ -5,9 +8,17 @@ class ProductRepository:
     """Encapsula o acesso a dados da entidade Product."""
 
     def create(self, ean: str, name: str, width: float, height: float, length: float, is_active: bool = True) -> Product:
-        return Product.objects.create(
-            ean=ean, name=name, width=width, height=height, length=length, is_active=is_active,
-        )
+        """Levanta ConflictError se o EAN já existir (garantido pelo unique do banco)."""
+        try:
+            # atomic = savepoint: o IntegrityError não quebra uma transação externa
+            with transaction.atomic():
+                return Product.objects.create(
+                    ean=ean, name=name, width=width, height=height, length=length, is_active=is_active,
+                )
+        except IntegrityError:
+            if self.find_by_ean(ean):
+                raise ConflictError(f"Product com ean '{ean}' já existe")
+            raise
 
     def find_by_id(self, id: int) -> Product | None:
         return Product.objects.filter(id=id).first()

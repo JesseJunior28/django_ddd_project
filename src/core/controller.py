@@ -30,6 +30,9 @@ class Controller(APIView):
     def not_found(self, data=None) -> Response:
         return Response(data, status=status.HTTP_404_NOT_FOUND)
 
+    def conflict(self, data=None) -> Response:
+        return Response(data, status=status.HTTP_409_CONFLICT)
+
     def internal_server_error(self, data=None) -> Response:
         return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -43,8 +46,12 @@ class Controller(APIView):
                 InputValidationError: self.bad_request,
                 NotFoundError: self.not_found,
             })
+
+        Busca pela MRO do erro: a classe mais específica mapeada vence,
+        então mapear BusinessError também cobre NotFoundError, ConflictError...
         """
-        handler = error_map.get(type(error))
-        if handler:
-            return handler({"error": str(error)})
+        for error_type in type(error).__mro__:
+            handler = error_map.get(error_type)
+            if handler:
+                return handler({"error": str(error)})
         return self.internal_server_error({"error": "UnknownError"})

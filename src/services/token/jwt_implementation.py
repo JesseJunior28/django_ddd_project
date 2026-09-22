@@ -32,11 +32,6 @@ _TYP: dict[TokenType, str] = {
     TokenType.RefreshToken: "rt+jwt",
 }
 
-# Audience e issuer — idênticos ao JwtTokenService.ts
-_AUDIENCE = "gestao-por-espaco"
-_ISSUER = "https://ge.drogariaglobo.com.br"
-
-
 _EXPIRES_IN_PATTERN = re.compile(r"^\s*(\d+)\s*([smhd])\s*$")
 _UNIT_SECONDS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 
@@ -63,8 +58,8 @@ class JwtTokenService:
     Configurações replicadas fielmente:
     - algorithm: HS256 (PyJWT usa isso para assinar)
     - header typ: at+jwt / id+jwt / rt+jwt por tipo de token
-    - audience: gestao-por-espaco
-    - issuer: https://ge.drogariaglobo.com.br
+    - audience/issuer: settings.JWT_AUDIENCE / settings.JWT_ISSUER
+      (defaults idênticos ao JwtTokenService.ts)
     - jwtid: UUID v4 gerado a cada sign()
     - expiresAt: timestamp em ms (igual ao TS)
     - secret: settings.JWT_SECRET (variável de ambiente JWT_SECRET)
@@ -72,6 +67,8 @@ class JwtTokenService:
 
     def __init__(self):
         self.secret: str = settings.JWT_SECRET
+        self.audience: str = settings.JWT_AUDIENCE
+        self.issuer: str = settings.JWT_ISSUER
         # Parse na construção: configuração inválida falha logo, não no 1º login
         self._expires_in_seconds: dict[TokenType, int] = {
             token_type: _parse_expires_in(getattr(settings, setting_name))
@@ -94,8 +91,8 @@ class JwtTokenService:
             "sub": str(payload["sub"]),
             "exp": exp,
             "iat": now,
-            "aud": _AUDIENCE,
-            "iss": _ISSUER,
+            "aud": self.audience,
+            "iss": self.issuer,
             "jti": str(uuid.uuid4()),
         }
 
@@ -128,8 +125,8 @@ class JwtTokenService:
                 token,
                 self.secret,
                 algorithms=["HS256"],
-                audience=_AUDIENCE,
-                issuer=_ISSUER,
+                audience=self.audience,
+                issuer=self.issuer,
             )
         except jwt.ExpiredSignatureError:
             return wrong(TokenExpiredError())

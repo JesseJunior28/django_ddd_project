@@ -33,7 +33,8 @@ class User(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "user"
+        # "user" é palavra reservada no PostgreSQL — plural, como branches/products
+        db_table = "users"
         ordering = ["-created_at"]
 
     def __str__(self):
@@ -54,7 +55,7 @@ class ResetToken(models.Model):
     )
 
     class Meta:
-        db_table = "reset_token"
+        db_table = "reset_tokens"
         ordering = ["-created_at"]
 
     def __str__(self):

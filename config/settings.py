@@ -20,14 +20,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-o+4v2nv3v27r@bi2d+)cu6(&!hhew+6w4j=&fw3-wps%jfaj-h",
-)
+# Defaults só servem para desenvolvimento: em produção (DEBUG=False) o boot
+# falha se algum deles estiver em uso — ver checagem no fim deste arquivo.
+INSECURE_SECRET_KEY = "django-insecure-change-me"
+INSECURE_JWT_SECRET = "insecure-secret-change-me"
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
+# `or`: variável definida mas vazia (ex: DJANGO_SECRET_KEY= no .env) cai no default
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or INSECURE_SECRET_KEY
+
+# Seguro por padrão: debug só liga explicitamente (o docker-compose liga em dev)
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
@@ -123,7 +125,9 @@ PASSWORD_HASHERS = [
 
 # JWT — idênticos ao config/default.yaml do backend TS
 
-JWT_SECRET = os.environ.get("JWT_SECRET", "insecure-secret-change-me")
+JWT_SECRET = os.environ.get("JWT_SECRET") or INSECURE_JWT_SECRET
+JWT_AUDIENCE = os.environ.get("JWT_AUDIENCE", "gestao-por-espaco")
+JWT_ISSUER = os.environ.get("JWT_ISSUER", "https://ge.drogariaglobo.com.br")
 JWT_ACCESS_TOKEN_EXPIRES_IN = os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_IN", "1h")
 JWT_ID_TOKEN_EXPIRES_IN = os.environ.get("JWT_ID_TOKEN_EXPIRES_IN", "15m")
 JWT_REFRESH_TOKEN_EXPIRES_IN = os.environ.get("JWT_REFRESH_TOKEN_EXPIRES_IN", "7d")
@@ -144,3 +148,23 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+# Segredos padrão: em produção bloqueiam o boot (vale para qualquer servidor,
+# inclusive gunicorn, que não roda system checks). Em dev, o aviso vem pelo
+# system check tooling.W001 (src/_app/checks.py).
+_insecure_secrets = [
+    name
+    for name, value, default in [
+        ("DJANGO_SECRET_KEY", SECRET_KEY, INSECURE_SECRET_KEY),
+        ("JWT_SECRET", JWT_SECRET, INSECURE_JWT_SECRET),
+    ]
+    if value == default
+]
+if not DEBUG and _insecure_secrets:
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured(
+        f"Segredos padrão em uso com DEBUG=False: {', '.join(_insecure_secrets)}. "
+        "Defina-os nas variáveis de ambiente."
+    )

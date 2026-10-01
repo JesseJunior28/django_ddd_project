@@ -15,7 +15,7 @@ SuccessOutput = TypeVar("SuccessOutput")
 class UseCase(ABC, Generic[Input, FailureOutput, SuccessOutput]):
     """
     Classe base para todos os use cases.
-    Segue o mesmo padrão do TS: validate() -> execute()
+    Executa validação antes da regra de negócio.
     """
 
     @abstractmethod

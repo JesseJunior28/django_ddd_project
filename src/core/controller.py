@@ -33,13 +33,16 @@ class Controller(APIView):
     def conflict(self, data=None) -> Response:
         return Response(data, status=status.HTTP_409_CONFLICT)
 
+    def unprocessable_entity(self, data=None) -> Response:
+        return Response(data, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
     def internal_server_error(self, data=None) -> Response:
         return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def map_error(self, error, error_map: dict) -> Response:
         """
         Mapeia um erro para um método de resposta HTTP.
-        Equivalente ao mapError() do TS.
+        Associa tipos de erro aos handlers HTTP correspondentes.
 
         Uso:
             return self.map_error(error, {

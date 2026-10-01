@@ -3,8 +3,8 @@ from typing import Protocol
 
 class HashService(Protocol):
     """
-    Contrato de hashing de senha — equivalente à interface HashService do TS.
-    Implementação padrão: BcryptHashService (hashes $2b$, compatíveis com o TS).
+    Contrato de hashing de senha.
+    Implementação padrão: BcryptHashService com hashes no formato $2b$.
     """
 
     def hash(self, password: str) -> str: ...

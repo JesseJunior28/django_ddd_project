@@ -1,30 +1,25 @@
-from rest_framework.request import Request
 from rest_framework.response import Response
 
-from src.core import Controller
-from src.errors import InputValidationError, UnknownError
-from .dtos import CreateBranchInput
+from src.entities.branch.repository import BranchRepository
+from src.middlewares.auth import AuthenticatedController
 from .factory import build_use_case
 
 
-class CreateBranchView(Controller):
-    def post(self, request: Request) -> Response:
-        use_case = build_use_case()
+class CreateBranchView(AuthenticatedController):
+    authorized_roles = ("ADMIN",)
 
-        input_data = CreateBranchInput(
-            name=request.data.get("name"),
-            city=request.data.get("city"),
-            uf=request.data.get("uf"),
-            address=request.data.get("address"),
-        )
+    def post(self, request):
+        return self.respond(build_use_case().run(request.data), {"InputValidationError": 400})
 
-        result = use_case.run(input_data)
 
-        if result.is_wrong():
-            error = result.value
-            return self.map_error(error, {
-                InputValidationError: self.bad_request,
-                UnknownError: self.internal_server_error,
-            })
+class LegacyCreateBranchView(AuthenticatedController):
+    """Endpoint legado de criação de filial."""
 
-        return self.created({"id": result.value.id, "name": result.value.name})
+    authorized_roles = ("ADMIN",)
+
+    def post(self, request):
+        fields = ("name", "city", "uf", "address")
+        if any(not request.data.get(field) for field in fields):
+            return Response({"error": "InputValidationError"}, status=400)
+        branch = BranchRepository().create(**{field: request.data[field] for field in fields})
+        return Response({"id": branch.id, "name": branch.name}, status=201)

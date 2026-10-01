@@ -1,7 +1,6 @@
 from .use_case import CreateBranchUseCase
-from src.entities.branch.repository import BranchRepository
+from src.entities.branch.service import BranchService
 
 
 def build_use_case() -> CreateBranchUseCase:
-    repository = BranchRepository()
-    return CreateBranchUseCase(repository)
+    return CreateBranchUseCase(BranchService())

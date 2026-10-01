@@ -21,7 +21,7 @@ class BusinessError(Exception):
 
 
 class InputValidationError(ApplicationError):
-    """Erro de validação de input. Equivalente ao InputValidationError do TS."""
+    """Erro de validação da entrada."""
 
     def __init__(self, message: str = "Input validation error"):
         super().__init__(message)
@@ -46,3 +46,10 @@ class ConflictError(BusinessError):
 
     def __init__(self, message: str = "Conflict"):
         super().__init__(message)
+
+
+class PersistenceError(ApplicationError):
+    """Stable public envelope for internal persistence failures."""
+
+    def __init__(self):
+        super().__init__("Erro interno, por favor tente novamente mais tarde ou contate o suporte.")

@@ -52,9 +52,19 @@ INSTALLED_APPS = [
     'src.entities.branch',
     'src.entities.product',
     'src.entities.user',
+    'src.entities.industry',
+    'src.entities.zone',
+    'src.entities.planogram',
+    'src.entities.branch_layout',
+    'src.entities.demand',
+    'src.entities.notification',
+    'src.entities.routine',
+    'src.entities.review',
 ]
 
 MIDDLEWARE = [
+    'src.middlewares.login_rate_limit.LoginRateLimitMiddleware',
+    'src.middlewares.register_rate_limit.RegisterRateLimitMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -65,6 +75,19 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+
+# Diagnóstico de infraestrutura opcional; não altera respostas de negócio.
+HTTP_METRICS_ENABLED = os.environ.get("HTTP_METRICS_ENABLED", "False") == "True"
+if HTTP_METRICS_ENABLED:
+    MIDDLEWARE.insert(0, "src._app.observability.RequestMetricsMiddleware")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"message": {"format": "%(message)s"}},
+    "handlers": {"http_json": {"class": "logging.StreamHandler", "stream": "ext://sys.stdout", "formatter": "message"}},
+    "loggers": {"infrastructure.http": {"handlers": ["http_json"], "level": "INFO", "propagate": False}},
+}
 
 TEMPLATES = [
     {
@@ -118,12 +141,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Usado só pelo django.contrib.auth (superuser/admin). O User do domínio
-# (src.entities.user) usa BcryptHashService — hashes $2b$ compatíveis com o TS.
+# (src.entities.user) usa BcryptHashService e hashes no formato $2b$.
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.PBKDF2PasswordHasher",
 ]
 
-# JWT — idênticos ao config/default.yaml do backend TS
+# Configurações de emissão e validação de JWT.
 
 JWT_SECRET = os.environ.get("JWT_SECRET") or INSECURE_JWT_SECRET
 JWT_AUDIENCE = os.environ.get("JWT_AUDIENCE", "gestao-por-espaco")
@@ -131,6 +154,13 @@ JWT_ISSUER = os.environ.get("JWT_ISSUER", "https://ge.drogariaglobo.com.br")
 JWT_ACCESS_TOKEN_EXPIRES_IN = os.environ.get("JWT_ACCESS_TOKEN_EXPIRES_IN", "1h")
 JWT_ID_TOKEN_EXPIRES_IN = os.environ.get("JWT_ID_TOKEN_EXPIRES_IN", "15m")
 JWT_REFRESH_TOKEN_EXPIRES_IN = os.environ.get("JWT_REFRESH_TOKEN_EXPIRES_IN", "7d")
+MAX_LOGIN_TRIES = int(os.environ.get("MAX_LOGIN_TRIES", "5"))
+EMAIL_HOST = os.environ.get("SMTP_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("SMTP_PORT", "1025"))
+EMAIL_USERNAME = os.environ.get("SMTP_USERNAME", "")
+EMAIL_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+EMAIL_SENDER = os.environ.get("SMTP_SENDER", "no-reply@example.test")
+RESET_PASSWORD_PAGE_URL = os.environ.get("RESET_PASSWORD_PAGE_URL", "http://localhost/reset-password")
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/

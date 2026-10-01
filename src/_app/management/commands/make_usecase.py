@@ -1,8 +1,8 @@
 """
 make_usecase — gerador de use cases DDD para Django
-Equivalente ao `npx plop` do projeto TypeScript.
+Gera a estrutura inicial de um caso de uso.
 
-Uso (interativo, igual o Plop):
+Uso interativo:
     python manage.py make_usecase
 
 Uso (direto, sem prompts):
@@ -51,7 +51,7 @@ def to_kebab_case(name: str) -> str:
 
 
 # ──────────────────────────────────────────────
-# Templates — equivalentes aos .hbs do Plop
+# Modelos de arquivos gerados pelo comando.
 # ──────────────────────────────────────────────
 
 TEMPLATE_DTOS = '''\
@@ -158,7 +158,7 @@ URL_SNIPPET = '''\
 
 
 class Command(BaseCommand):
-    help = "Gera a estrutura de um use case DDD (equivalente ao npx plop)"
+    help = "Gera a estrutura de um caso de uso DDD"
 
     def add_arguments(self, parser):
         parser.add_argument("domain", type=str, nargs="?", default=None,
@@ -179,7 +179,7 @@ class Command(BaseCommand):
         http_path = options["path"]
         dry_run: bool = options["dry_run"]
 
-        # ── Modo interativo, igual o prompt do Plop ──
+        # ── Modo interativo ──
         if not domain_raw:
             domain_raw = input("🏷️  Domínio (ex: branch, auth, execution): ").strip()
         if not use_case_raw:

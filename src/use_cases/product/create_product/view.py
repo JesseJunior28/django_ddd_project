@@ -1,13 +1,15 @@
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from src.core import Controller
+from src.middlewares.auth import AuthenticatedController
 from src.errors import InputValidationError, UnknownError, ConflictError
 from .dtos import CreateProductInput
 from .factory import build_use_case
 
 
-class CreateProductView(Controller):
+class CreateProductView(AuthenticatedController):
+    authorized_roles = ("ADMIN",)
+
     def post(self, request: Request) -> Response:
         use_case = build_use_case()
 

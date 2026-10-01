@@ -28,3 +28,25 @@ superuser:
 
 logs:
 	docker compose logs -f web
+
+frontend-install:
+	cd frontend && npm ci
+
+frontend-dev:
+	cd frontend && npm run dev
+
+frontend-check:
+	cd frontend && npm run check
+
+fullstack:
+	docker compose -f docker-compose.yml -f docker-compose.frontend.yml up --build
+
+.PHONY: runtime-check parity-check restore-drill
+runtime-check:
+	bash tools/django-runtime/validate.sh
+
+parity-check:
+	CONTRACT_PRODUCTION=1 bash tools/http-contracts/compare.sh
+
+restore-drill:
+	bash tools/django-runtime/restore-drill.sh

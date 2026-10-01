@@ -42,8 +42,9 @@ class User(models.Model):
 
 
 class ResetToken(models.Model):
-    
-    token = models.CharField(max_length=255)
+
+    # Tokens JWT assinados com HS512 podem ultrapassar o limite de 255 caracteres.
+    token = models.TextField()
     expires_at = models.DateTimeField()
     used_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

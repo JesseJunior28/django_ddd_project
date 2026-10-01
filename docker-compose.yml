@@ -32,6 +32,7 @@ services:
       DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-change-me}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      JWT_SECRET: ${JWT_SECRET:-insecure-jwt-secret-change-me}
       DB_ENGINE: django.db.backends.postgresql
       DB_NAME: ${DB_NAME:-django_ddd}
       DB_USER: ${DB_USER:-django_ddd}
